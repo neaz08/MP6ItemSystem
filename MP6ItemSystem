@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Item Management System</title>
+</head>
+
+
+<body>
+
+
+    
+
+    <h1>Item Management System</h1>
+
+
+   
+
+    <div>
+
+        <label for="itemName">
+            Item Name:
+        </label>
+
+        <input type="text" id="itemName" size="20" autocomplete="off">
+
+    </div><br>
+
+    <div>
+
+        <label for="quantity">
+            Quantity:
+        </label>
+
+        <input type="number" id="quantity" size="20" min="1" autocomplete="off">
+
+    </div><br>
+
+    <div>
+
+        <label for="price">
+            Price:
+        </label>
+
+        <input type="number" id="price" size="20" min="0" step="0.01" autocomplete="off">
+
+    </div><br>
+
+    <button
+        id="addButton"
+        onclick="saveItem()"
+    >
+        Add Item
+    </button>
+
+
+    <button id="cancelButton" hidden onclick="cancelUpdate()">
+        Cancel
+    </button>
+
+
+    
+
+    <div id="message"></div>
+
+
+    
+
+    <hr>
+
+
+    <h2>Item Records</h2>
+
+    <table border="1" cellspacing="2" cellpadding="7" width="545">
+
+        <thead>
+
+            <tr>
+
+                <th width="57" align="center">CTR</th>
+
+                <th width="91" align="center">Item Name</th>
+
+                <th width="70" align="center">Quantity</th>
+
+                <th width="59" align="center">Price</th>
+
+                <th width="91" align="center">Total Price</th>
+
+                <th width="129" align="center">Actions</th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody id="itemTable">
+
+        </tbody>
+
+
+        <tfoot>
+
+            <tr>
+
+                <td colspan="4" align="right"><b>Grand Total</b></td>
+
+                <td id="grandTotal" align="center"><b>0</b></td>
+
+                <td></td>
+
+            </tr>
+
+        </tfoot>
+
+    </table>
+
+
+
+    <script>
+
+        let items = [];
+
+        let editID = null;
+
+
+        window.onload = function () {
+
+            /*
+             * Input fields are blank
+             * when the page is first loaded.
+             */
+
+            document.getElementById("itemName").value = "";
+
+            document.getElementById("quantity").value = "";
+
+            document.getElementById("price").value = "";
+
+            document.getElementById("message").innerHTML = "";
+
+
+            loadData();
+
+            displayItems();
+
+        };
+
+        function loadData() {
+
+            let savedData =
+                localStorage.getItem(
+                    "itemManagementData"
+                );
+
+
+            if (savedData) {
+
+                try {
+
+                    items = JSON.parse(savedData);
+
+                } catch (error) {
+
+                    items = [];
+
+                }
+
+            }
+
+            if (!savedData) {
+
+                items = [
+
+                    {
+                        ctr: 10001,
+                        itemName: "Laptop",
+                        quantity: 10,
+                        price: 55000
+                    },
+
+                    {
+                        ctr: 10002,
+                        itemName: "Computer",
+                        quantity: 50,
+                        price: 120000
+                    },
+
+                    {
+                        ctr: 10003,
+                        itemName: "Keyboard",
+                        quantity: 10,
+                        price: 700
+                    },
+
+                    {
+                        ctr: 10004,
+                        itemName: "Mouse",
+                        quantity: 10,
+                        price: 1500
+                    }
+
+                ];
+
+
+                saveData();
+
+            }
+
+        }
+
+        function saveData() {
+
+            localStorage.setItem(
+                "itemManagementData",
+                JSON.stringify(items)
+            );
+
+        }
+
+        function displayItems() {
+
+            const table =
+                document.getElementById(
+                    "itemTable"
+                );
+
+
+            table.innerHTML = "";
+
+
+            let grandTotal = 0;
+
+            if (items.length === 0) {
+
+                table.innerHTML = `
+
+                    <tr>
+
+                        <td
+                            colspan="6"
+                        >
+                            No item records found.
+                        </td>
+
+                    </tr>
+
+                `;
+
+
+                document.getElementById("grandTotal").innerHTML = "<b>0</b>";
+
+
+                return;
+
+            }
+
+            items.forEach(function (item) {
+
+
+                let total =
+                    Number(item.quantity) *
+                    Number(item.price);
+
+
+                grandTotal += total;
+
+
+
+                let row =
+                    document.createElement("tr");
+
+
+
+                row.innerHTML = `
+
+                    <td>
+                        ${item.ctr}
+                    </td>
+
+
+                    <td>
+                        ${escapeHTML(item.itemName)}
+                    </td>
+
+
+                    <td>
+                        ${item.quantity}
+                    </td>
+
+
+                    <td>
+                        ${formatNumber(item.price)}
+                    </td>
+
+
+                    <td>
+                        ${formatNumber(total)}
+                    </td>
+
+
+                    <td>
+
+                        <button
+                            onclick="editItem(${item.ctr})"
+                        >
+                            Update
+                        </button>
+
+
+                        <button
+                            onclick="deleteItem(${item.ctr})"
+                        >
+                            Delete
+                        </button>
+
+                    </td>
+
+                `;
+
+
+
+                table.appendChild(row);
+
+            });
+
+            document.getElementById("grandTotal").innerHTML =
+                "<b>" + formatNumber(grandTotal) + "</b>";
+
+        }
+
+function saveItem() {
+    const itemName =
+        document.getElementById(
+            "itemName"
+        ).value.trim();
+    const quantity =
+        document.getElementById(
+            "quantity"
+        ).value;
+    const price =
+        document.getElementById(
+            "price"
+        ).value;
+
+    // 1. Item Name required
+    if (itemName === "") {
+        showMessage(
+            "Please enter the item name.",
+            "black"
+        );
+        return;
+    }
+
+    // 2. Quantity must be greater than 0 (covers empty + zero + negative)
+    if (quantity === "" || Number(quantity) <= 0) {
+        showMessage(
+            "Quantity must be greater than zero.",
+            "black"
+        );
+        return;
+    }
+
+    // 3. Price cannot be negative (covers empty as well)
+    if (price === "" || Number(price) < 0) {
+        showMessage(
+            "Price cannot be negative.",
+            "black"
+        );
+        return;
+    }
+
+    if (editID !== null) {
+        let index =
+            items.findIndex(
+                function (item) {
+                    return item.ctr === editID;
+                }
+            );
+        if (index !== -1) {
+            items[index].itemName =
+                itemName;
+            items[index].quantity =
+                Number(quantity);
+            items[index].price =
+                Number(price);
+            saveData();
+            displayItems();
+            showMessage(
+                "Record " +
+                editID +
+                " was updated successfully.",
+                "black"
+            );
+            clearForm();
+            editID = null;
+            document.getElementById(
+                "addButton"
+            ).innerText = "Add Item";
+            document.getElementById("cancelButton").hidden = true;
+        }
+        return;
+    }
+
+
+    let newCTR =
+        getNextCTR();
+    let newItem = {
+        ctr: newCTR,
+        itemName: itemName,
+        quantity: Number(quantity),
+        price: Number(price)
+    };
+    items.push(newItem);
+    saveData();
+    displayItems();
+    showMessage(
+        "Item added successfully.",
+        "black"
+    );
+    clearForm();
+}
+
+
+
+    
+
+        function getNextCTR() {
+
+
+            if (items.length === 0) {
+
+                return 10001;
+
+            }
+
+
+
+            let maxCTR = 10000;
+
+
+
+            items.forEach(
+                function (item) {
+
+
+                    if (
+                        Number(item.ctr) >
+                        maxCTR
+                    ) {
+
+                        maxCTR =
+                            Number(item.ctr);
+
+                    }
+
+                }
+            );
+
+
+
+            return maxCTR + 1;
+
+        }
+
+
+
+    
+
+        function editItem(id) {
+
+
+            let item =
+                items.find(
+                    function (item) {
+
+                        return item.ctr === id;
+
+                    }
+                );
+
+
+
+            if (!item) {
+
+                return;
+
+            }
+
+
+
+            document.getElementById(
+                "itemName"
+            ).value =
+                item.itemName;
+
+
+
+            document.getElementById(
+                "quantity"
+            ).value =
+                item.quantity;
+
+
+
+            document.getElementById(
+                "price"
+            ).value =
+                item.price;
+
+
+
+            editID = id;
+
+
+
+            document.getElementById(
+                "addButton"
+            ).innerText =
+                "Update Item";
+
+
+
+            document.getElementById("cancelButton").hidden = false;
+
+
+
+            document.getElementById(
+                "message"
+            ).innerHTML = "";
+
+        }
+
+
+
+
+
+        function cancelUpdate() {
+
+
+            editID = null;
+
+
+
+            clearForm();
+
+
+
+            document.getElementById(
+                "addButton"
+            ).innerText =
+                "Add Item";
+
+
+
+            document.getElementById(
+                "cancelButton"
+            ).style.display =
+                "none";
+
+
+
+            document.getElementById(
+                "message"
+            ).innerHTML = "";
+
+        }
+
+
+        function deleteItem(id) {
+
+
+            let answer =
+                confirm(
+                    "Are you sure you want to delete Record " +
+                    id +
+                    "?"
+                );
+
+
+
+            if (!answer) {
+
+                return;
+
+            }
+
+
+
+            items =
+                items.filter(
+                    function (item) {
+
+                        return item.ctr !== id;
+
+                    }
+                );
+
+
+
+            saveData();
+
+            displayItems();
+
+
+
+            showMessage(
+                "Record " +
+                id +
+                " was deleted successfully.",
+                "black"
+            );
+
+
+
+            clearForm();
+
+        }
+
+
+
+        function clearForm() {
+
+
+            document.getElementById(
+                "itemName"
+            ).value = "";
+
+
+
+            document.getElementById(
+                "quantity"
+            ).value = "";
+
+
+
+            document.getElementById(
+                "price"
+            ).value = "";
+
+        }
+
+
+
+        function showMessage(text, color) {
+
+
+            const message =
+                document.getElementById(
+                    "message"
+                );
+
+
+
+            message.innerText = text;
+
+            
+
+        }
+
+
+
+    
+
+        function formatNumber(number) {
+
+
+            return Number(number).toLocaleString(
+                "en-US",
+                {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                }
+            );
+
+        }
+
+
+
+    
+
+        function escapeHTML(text) {
+
+
+            return String(text)
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+    </script>
+
+</body>
+</html>
